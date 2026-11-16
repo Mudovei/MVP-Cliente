@@ -1,0 +1,131 @@
+@if (edicao() && !existente()) {
+  <div class="pg">
+    <app-titulo-pagina titulo="Paciente não encontrado" subtitulo="Esse paciente não existe ou foi removido." [voltarPara]="voltar()" />
+  </div>
+} @else {
+  <div class="pg">
+    <app-titulo-pagina
+      [titulo]="edicao() ? 'Editar Paciente' : 'Cadastrar Novo Paciente'"
+      [subtitulo]="edicao() ? 'Altere as informações necessárias e salve o cadastro' : 'Preencha as informações para realizar o cadastro do paciente'"
+      [voltarPara]="voltar()"
+    />
+
+    <form class="cartao form-pac" novalidate (submit)="$event.preventDefault(); cadastrar()">
+      <div class="form-pac-grade">
+        <section class="form-pac-bloco" aria-labelledby="t-dados">
+          <h2 id="t-dados" class="form-pac-titulo"><app-icone nome="usuario" /> Dados Pessoais</h2>
+          <div class="form-pac-campos">
+            <div class="campo-cheio foto-campo">
+              <app-avatar [nome]="f().nome || 'Paciente'" [foto]="f().foto || undefined" />
+              <div class="foto-acoes">
+                <span class="campo-rotulo">Foto do paciente (opcional)</span>
+                <div class="foto-botoes">
+                  <button type="button" class="botao-claro" (click)="arquivoFoto.click()">{{ f().foto ? 'Trocar foto' : 'Adicionar foto' }}</button>
+                  @if (f().foto) { <button type="button" class="botao-claro" (click)="removerFoto()">Remover</button> }
+                </div>
+                @if (erroFoto()) { <small class="campo-msg" role="alert">{{ erroFoto() }}</small> }
+                <input #arquivoFoto type="file" hidden accept="image/*" (change)="escolherFoto($event)" />
+              </div>
+            </div>
+            <label class="campo-form campo-cheio" [class.campo-form-erro]="mostrarErro('nome')">
+              <span class="campo-rotulo">Nome completo *</span>
+              <input type="text" placeholder="Digite o nome completo" autocomplete="off" [value]="f().nome" (input)="digitar('nome', $event)" [attr.aria-invalid]="!!mostrarErro('nome')" />
+              @if (mostrarErro('nome'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('nascimento')">
+              <span class="campo-rotulo">Data de Nascimento*</span>
+              <input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" autocomplete="off" [value]="f().nascimento" (input)="digitar('nascimento', $event)" [attr.aria-invalid]="!!mostrarErro('nascimento')" />
+              @if (mostrarErro('nascimento'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('cpf')">
+              <span class="campo-rotulo">CPF*</span>
+              <input type="text" inputmode="numeric" placeholder="Digite o CPF" autocomplete="off" [value]="f().cpf" (input)="digitar('cpf', $event)" [attr.aria-invalid]="!!mostrarErro('cpf')" />
+              @if (mostrarErro('cpf'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('cep')">
+              <span class="campo-rotulo">CEP*</span>
+              <input type="text" inputmode="numeric" placeholder="Digite o CEP" autocomplete="off" [value]="f().cep" (input)="digitar('cep', $event)" [attr.aria-invalid]="!!mostrarErro('cep')" />
+              @if (mostrarErro('cep'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('cidade')">
+              <span class="campo-rotulo">Cidade</span>
+              <input type="text" placeholder="Brasília" autocomplete="off" [value]="f().cidade" (input)="digitar('cidade', $event)" [attr.aria-invalid]="!!mostrarErro('cidade')" />
+              @if (mostrarErro('cidade'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form campo-cheio" [class.campo-form-erro]="mostrarErro('endereco')">
+              <span class="campo-rotulo">Endereço</span>
+              <input type="text" placeholder="Digite o endereço completo" autocomplete="off" [value]="f().endereco" (input)="digitar('endereco', $event)" [attr.aria-invalid]="!!mostrarErro('endereco')" />
+              @if (mostrarErro('endereco'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('inicio')">
+              <span class="campo-rotulo">Data de início</span>
+              <input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" autocomplete="off" [value]="f().inicio" (input)="digitar('inicio', $event)" [attr.aria-invalid]="!!mostrarErro('inicio')" />
+              @if (mostrarErro('inicio'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('encerramento')">
+              <span class="campo-rotulo">Data de encerramento</span>
+              <input type="text" inputmode="numeric" placeholder="DD/MM/AAAA" autocomplete="off" [value]="f().encerramento" (input)="digitar('encerramento', $event)" [attr.aria-invalid]="!!mostrarErro('encerramento')" />
+              @if (mostrarErro('encerramento'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <fieldset class="radios campo-cheio">
+              <legend class="campo-rotulo">Status</legend>
+              <div class="radios-seg">
+                <label class="radio"><input type="radio" name="status" [checked]="f().ativo" (change)="definir('ativo', true)" /><span class="radio-bolinha"></span> Ativo</label>
+                <label class="radio"><input type="radio" name="status" [checked]="!f().ativo" (change)="definir('ativo', false)" /><span class="radio-bolinha"></span> Inativo</label>
+              </div>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="form-pac-bloco" aria-labelledby="t-resp">
+          <h2 id="t-resp" class="form-pac-titulo">
+            <app-icone nome="usuario" /> Responsável
+            @if (menorDeIdade()) { <small class="form-pac-aviso">obrigatório para menores de 18 anos</small> }
+          </h2>
+          <div class="form-pac-campos">
+            <label class="campo-form campo-cheio" [class.campo-form-erro]="mostrarErro('rNome')">
+              <span class="campo-rotulo">Nome completo*</span>
+              <input type="text" placeholder="Digite o nome completo" autocomplete="off" [value]="f().rNome" (input)="digitar('rNome', $event)" [attr.aria-invalid]="!!mostrarErro('rNome')" />
+              @if (mostrarErro('rNome'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('rCpf')">
+              <span class="campo-rotulo">CPF*</span>
+              <input type="text" inputmode="numeric" placeholder="Digite o CPF" autocomplete="off" [value]="f().rCpf" (input)="digitar('rCpf', $event)" [attr.aria-invalid]="!!mostrarErro('rCpf')" />
+              @if (mostrarErro('rCpf'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('rTelefone')">
+              <span class="campo-rotulo">Telefone*</span>
+              <input type="tel" inputmode="tel" placeholder="(00) 00000-0000" autocomplete="off" [value]="f().rTelefone" (input)="digitar('rTelefone', $event)" [attr.aria-invalid]="!!mostrarErro('rTelefone')" />
+              @if (mostrarErro('rTelefone'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form campo-cheio" [class.campo-form-erro]="mostrarErro('rEmail')">
+              <span class="campo-rotulo">E-mail</span>
+              <input type="email" placeholder="Digite o email" autocomplete="off" [value]="f().rEmail" (input)="digitar('rEmail', $event)" [attr.aria-invalid]="!!mostrarErro('rEmail')" />
+              @if (mostrarErro('rEmail'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form campo-cheio" [class.campo-form-erro]="mostrarErro('rTelefone2')">
+              <span class="campo-rotulo">Telefone</span>
+              <input type="tel" inputmode="tel" placeholder="Digite o Telefone" autocomplete="off" [value]="f().rTelefone2" (input)="digitar('rTelefone2', $event)" [attr.aria-invalid]="!!mostrarErro('rTelefone2')" />
+              @if (mostrarErro('rTelefone2'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+            <label class="campo-form" [class.campo-form-erro]="mostrarErro('rParentesco')">
+              <span class="campo-rotulo">Grau de parentesco</span>
+              <input type="text" placeholder="Mãe" autocomplete="off" [value]="f().rParentesco" (input)="digitar('rParentesco', $event)" [attr.aria-invalid]="!!mostrarErro('rParentesco')" />
+              @if (mostrarErro('rParentesco'); as m) { <small class="campo-msg" role="alert">{{ m }}</small> }
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="form-pac-botoes">
+        <button type="button" class="botao-claro" (click)="cancelar()">Cancelar</button>
+        <button type="submit" class="botao-escuro">{{ edicao() ? 'Salvar' : 'Cadastrar' }}</button>
+      </div>
+    </form>
+  </div>
+
+  <app-dialogo
+    [aberto]="confirmando()" [titulo]="edicao() ? 'Salvar alterações?' : 'Confirmar Cadastro?'"
+    (cancelar)="confirmando.set(false)" (confirmar)="confirmar()"
+  />
+}

@@ -1,0 +1,58 @@
+@if (paciente(); as p) {
+  <div class="pg">
+    <app-titulo-pagina titulo="Prontuário do paciente" subtitulo="Histórico e informações do paciente" [voltarPara]="raiz() + '/pacientes'" />
+
+    <app-faixa-paciente [paciente]="p" [perfil]="perfil()" />
+
+    <div class="pront-grade">
+      <div class="pront-coluna">
+        <section class="cartao pront-bloco" aria-label="Informações pessoais e responsável">
+          <h2 class="pront-titulo"><app-icone nome="usuario" /> Informações pessoais</h2>
+          <dl class="pront-dados">
+            <dt>Nascimento:</dt><dd>{{ nascimento() }}</dd>
+            <dt>CPF:</dt><dd>{{ p.cpf }}</dd>
+            <dt>Endereço:</dt><dd>{{ p.endereco }}</dd>
+          </dl>
+          <h2 class="pront-titulo pront-titulo-2"><app-icone nome="usuario" /> Responsável</h2>
+          <dl class="pront-dados">
+            <dt>Nome</dt><dd>{{ p.responsavel.nome }}</dd>
+            <dt>Relação</dt><dd>{{ p.responsavel.relacao }}</dd>
+            <dt>Telefone</dt><dd>{{ p.responsavel.telefone }}</dd>
+            <dt>E-mail</dt><dd>{{ p.responsavel.email || '—' }}</dd>
+          </dl>
+        </section>
+
+        <section class="cartao pront-bloco" aria-label="Últimas informações">
+          <h2 class="pront-titulo"><app-icone nome="relogio" /> Últimas Informações</h2>
+          <div class="pront-ultimas">
+            <p>
+              <span>Próxima Consulta - {{ proxima()?.data ?? '—' }}</span>
+              <span>{{ proxima()?.profissional ?? 'Nenhuma consulta marcada' }}</span>
+            </p>
+            <p>
+              <span>Última Consulta - {{ ultima()?.data ?? '—' }}</span>
+              <span>{{ ultima()?.profissional ?? 'Nenhuma consulta realizada' }}</span>
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <div class="pront-coluna pront-atalhos">
+        @for (s of secoes(); track s.id) {
+          <a class="cartao pront-atalho pront-atalho-link" [routerLink]="[raiz(), 'pacientes', p.id, s.id]">
+            <app-icone nome="prancheta" />
+            <span class="pront-atalho-texto">
+              <span class="pront-atalho-nome">{{ s.rotulo }}</span>
+              <span class="pront-atalho-desc">{{ s.descricao }}</span>
+            </span>
+            <app-icone nome="seta-direita" class="pront-seta" />
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="pg">
+    <app-titulo-pagina titulo="Paciente não encontrado" subtitulo="Esse paciente não existe ou foi removido." [voltarPara]="raiz() + '/pacientes'" />
+  </div>
+}

@@ -53,19 +53,19 @@ export const DATA_AGENDA = '01 de Setembro';
 
 export const AGENDA_DO_DIA: ItemAgenda[] = [
   { hora: '08:00', paciente: 'Ana Beatriz Silva', tipo: 'Avaliação Psicológica', status: 'confirmado' },
-  { hora: '09:30', paciente: 'João Pedro Lima', tipo: 'Acompanhamento', status: 'confirmado' },
-  { hora: '10:30', paciente: 'Maria Clara Santos', tipo: 'Devolutiva', status: 'pendente' },
-  { hora: '12:30', paciente: 'Lucas Martins', tipo: 'Acompanhamento', status: 'confirmado' },
-  { hora: '13:30', paciente: 'Júlia Fernandes', tipo: 'Acompanhamento', status: 'cancelado' },
+  { hora: '09:00', paciente: 'João Pedro Lima', tipo: 'Acompanhamento', status: 'confirmado' },
+  { hora: '10:00', paciente: 'Maria Clara Santos', tipo: 'Devolutiva', status: 'pendente' },
+  { hora: '12:00', paciente: 'Lucas Martins', tipo: 'Acompanhamento', status: 'confirmado' },
+  { hora: '13:00', paciente: 'Júlia Fernandes', tipo: 'Acompanhamento', status: 'cancelado' },
   { hora: '15:00', paciente: 'Mateus Santos', tipo: 'Avaliação psicológica', status: 'confirmado' },
-  { hora: '16:30', paciente: 'Higor silva', tipo: 'Devolutiva', status: 'confirmado' },
+  { hora: '16:00', paciente: 'Higor silva', tipo: 'Devolutiva', status: 'confirmado' },
 ];
 
 export const PROXIMAS_CONSULTAS: ConsultaProxima[] = [
-  { paciente: 'Maria Clara Santos', tipo: 'Avaliação psicológica', data: '01/09/2026', hora: '9:30', status: 'confirmado' },
-  { paciente: 'Lucas dos Santos', tipo: 'Devolutiva', data: '01/09/2026', hora: '9:30', status: 'pendente' },
-  { paciente: 'Miguel Soares', tipo: 'Acompanhamento', data: '01/09/2026', hora: '9:30', status: 'confirmado' },
-  { paciente: 'Ana Clara Rodrigues', tipo: 'Avaliação psicológica', data: '01/09/2026', hora: '9:30', status: 'cancelado' },
+  { paciente: 'Maria Clara Santos', tipo: 'Avaliação psicológica', data: '01/09/2026', hora: '09:00', status: 'confirmado' },
+  { paciente: 'Lucas dos Santos', tipo: 'Devolutiva', data: '01/09/2026', hora: '09:00', status: 'pendente' },
+  { paciente: 'Miguel Soares', tipo: 'Acompanhamento', data: '01/09/2026', hora: '09:00', status: 'confirmado' },
+  { paciente: 'Ana Clara Rodrigues', tipo: 'Avaliação psicológica', data: '01/09/2026', hora: '09:00', status: 'cancelado' },
 ];
 
 export const CARDS_RESUMO: CardResumo[] = [

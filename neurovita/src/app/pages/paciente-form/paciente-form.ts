@@ -2,7 +2,6 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { Router } from '@angular/router';
 
 import { Aviso } from '../../shared/aviso/aviso';
-import { Avatar } from '../../shared/avatar/avatar';
 import { Clinica } from '../../shared/clinica/clinica';
 import { Dialogo } from '../../shared/dialogo/dialogo';
 import { Icone } from '../../shared/icone/icone';
@@ -11,18 +10,20 @@ import { TituloPagina } from '../../shared/titulo-pagina/titulo-pagina';
 import { cpfValido, deISO, emailValido, formatarCpf, formatarTelefone, idadeDe, telefoneValido } from '../../shared/util';
 
 interface Formulario {
-  nome: string; nascimento: string; cpf: string; cep: string; cidade: string; endereco: string; inicio: string; encerramento: string;
+  nome: string; nascimento: string; cpf: string; cep: string; cidade: string; endereco: string; numero: string; complemento: string; bairro: string;
+  inicio: string; encerramento: string;
   ativo: boolean;
-  /** Foto do paciente (endereço da imagem; '' = sem foto). */
+  /** Foto já cadastrada (não é editada neste formulário; só é mantida ao salvar). */
   foto: string;
-  rNome: string; rCpf: string; rTelefone: string; rEmail: string; rTelefone2: string; rParentesco: string;
+  rNome: string; rCpf: string; rTelefone: string; rEmail: string; rParentesco: string;
 }
 
 type Campo = keyof Formulario;
 
 const VAZIO: Formulario = {
-  nome: '', nascimento: '', cpf: '', cep: '', cidade: '', endereco: '', inicio: '', encerramento: '', ativo: true, foto: '',
-  rNome: '', rCpf: '', rTelefone: '', rEmail: '', rTelefone2: '', rParentesco: '',
+  nome: '', nascimento: '', cpf: '', cep: '', cidade: '', endereco: '', numero: '', complemento: '', bairro: '',
+  inicio: '', encerramento: '', ativo: true, foto: '',
+  rNome: '', rCpf: '', rTelefone: '', rEmail: '', rParentesco: '',
 };
 
 /** Máscara DD/MM/AAAA. */
@@ -48,35 +49,12 @@ function dataParaISO(br: string): string {
   return real ? `${a}-${mes}-${d}` : '';
 }
 
-/** 'aaaa-mm-dd' -> 'DD/MM/AAAA' (o formulário sempre usa esse formato, qualquer que seja a preferência). */
-/** Lê a imagem e reduz para no máximo 320 px (guarda pouco na memória). */
-function reduzirFoto(arquivo: File, maximo = 320): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const leitor = new FileReader();
-    leitor.onerror = () => reject(leitor.error);
-    leitor.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('imagem inválida'));
-      img.onload = () => {
-        const escala = Math.min(1, maximo / Math.max(img.width, img.height));
-        const tela = document.createElement('canvas');
-        tela.width = Math.max(1, Math.round(img.width * escala));
-        tela.height = Math.max(1, Math.round(img.height * escala));
-        tela.getContext('2d')?.drawImage(img, 0, 0, tela.width, tela.height);
-        resolve(tela.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = String(leitor.result);
-    };
-    leitor.readAsDataURL(arquivo);
-  });
-}
-
 const dataBR = (iso?: string | null): string => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '');
 
 /** Cadastrar novo paciente ou editar um paciente existente. */
 @Component({
   selector: 'app-paciente-form',
-  imports: [Avatar, Dialogo, Icone, TituloPagina],
+  imports: [Dialogo, Icone, TituloPagina],
   templateUrl: './paciente-form.html',
 })
 export class PacienteForm {
@@ -117,10 +95,15 @@ export class PacienteForm {
     else if (!cpfValido(f.cpf)) e.cpf = 'CPF inválido.';
     if (!f.cep.trim()) e.cep = 'Informe o CEP.';
     else if (f.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP inválido.';
+    if (!f.cidade.trim()) e.cidade = 'Informe a cidade.';
+    if (!f.endereco.trim()) e.endereco = 'Informe o endereço.';
+    if (!f.numero.trim()) e.numero = 'Informe o número.';
+    if (!f.bairro.trim()) e.bairro = 'Informe o bairro.';
 
     const inicio = dataParaISO(f.inicio);
     const fim = dataParaISO(f.encerramento);
-    if (f.inicio && !inicio) e.inicio = 'Data inválida. Use DD/MM/AAAA.';
+    if (!f.inicio) e.inicio = 'Informe a data de início.';
+    else if (!inicio) e.inicio = 'Data inválida. Use DD/MM/AAAA.';
     if (f.encerramento && !fim) e.encerramento = 'Data inválida. Use DD/MM/AAAA.';
     else if (inicio && fim && fim < inicio) e.encerramento = 'Não pode ser antes da data de início.';
 
@@ -134,7 +117,6 @@ export class PacienteForm {
     if (f.rCpf.trim() && !cpfValido(f.rCpf)) e.rCpf = 'CPF inválido.';
     if (f.rTelefone.trim() && !telefoneValido(f.rTelefone)) e.rTelefone = 'Telefone inválido.';
     if (f.rEmail.trim() && !emailValido(f.rEmail)) e.rEmail = 'E-mail inválido.';
-    if (f.rTelefone2.trim() && !telefoneValido(f.rTelefone2)) e.rTelefone2 = 'Telefone inválido.';
     return e;
   });
 
@@ -147,10 +129,11 @@ export class PacienteForm {
       const semTraco = (v?: string) => (!v || v === '—' ? '' : v);
       this.f.set({
         nome: p.nome, nascimento: dataBR(p.nascimento), cpf: p.cpf, cep: p.cep ?? '', cidade: p.cidade ?? '',
-        endereco: semTraco(p.endereco), inicio: dataBR(p.diagnostico.inicioTratamento), encerramento: dataBR(p.encerramento),
+        endereco: semTraco(p.endereco), numero: p.numero ?? '', complemento: p.complemento ?? '', bairro: p.bairro ?? '',
+        inicio: dataBR(p.diagnostico.inicioTratamento), encerramento: dataBR(p.encerramento),
         ativo: p.status !== 'inativo', foto: p.foto ?? '',
         rNome: semTraco(p.responsavel.nome), rCpf: p.responsavel.cpf ?? '', rTelefone: semTraco(p.responsavel.telefone),
-        rEmail: p.responsavel.email ?? '', rTelefone2: p.responsavel.telefone2 ?? '', rParentesco: semTraco(p.responsavel.relacao),
+        rEmail: p.responsavel.email ?? '', rParentesco: semTraco(p.responsavel.relacao),
       });
     });
   }
@@ -162,34 +145,12 @@ export class PacienteForm {
   protected digitar(campo: Campo, evento: Event): void {
     let valor = (evento.target as HTMLInputElement).value;
     if (campo === 'cpf' || campo === 'rCpf') valor = formatarCpf(valor);
-    if (campo === 'rTelefone' || campo === 'rTelefone2') valor = formatarTelefone(valor);
+    if (campo === 'rTelefone') valor = formatarTelefone(valor);
     if (campo === 'nascimento' || campo === 'inicio' || campo === 'encerramento') valor = mascaraData(valor);
     if (campo === 'cep') valor = mascaraCep(valor);
     this.f.update((atual) => ({ ...atual, [campo]: valor }));
     // O campo mostra a máscara mesmo se o navegador tentar guardar o texto digitado.
     (evento.target as HTMLInputElement).value = valor;
-  }
-
-  protected readonly erroFoto = signal('');
-
-  protected async escolherFoto(evento: Event): Promise<void> {
-    const campo = evento.target as HTMLInputElement;
-    const arquivo = campo.files?.[0];
-    campo.value = '';
-    if (!arquivo) return;
-    if (!arquivo.type.startsWith('image/')) return this.erroFoto.set('Escolha um arquivo de imagem (JPG, PNG...).');
-    if (arquivo.size > 5 * 1024 * 1024) return this.erroFoto.set('A foto deve ter até 5 MB.');
-    try {
-      this.definir('foto', await reduzirFoto(arquivo));
-      this.erroFoto.set('');
-    } catch {
-      this.erroFoto.set('Não foi possível ler a foto.');
-    }
-  }
-
-  protected removerFoto(): void {
-    this.definir('foto', '');
-    this.erroFoto.set('');
   }
 
   protected definir<K extends Campo>(campo: K, valor: Formulario[K]): void {
@@ -210,8 +171,9 @@ export class PacienteForm {
     const paciente = this.clinica.salvarPaciente(
       {
         nome: f.nome.trim(), nascimento: this.nascimentoISO(), cpf: f.cpf, cep: f.cep, cidade: f.cidade.trim(), endereco: f.endereco.trim(),
+        numero: f.numero.trim(), complemento: f.complemento.trim(), bairro: f.bairro.trim(),
         inicio: dataParaISO(f.inicio), encerramento: dataParaISO(f.encerramento),
-        responsavel: { nome: f.rNome.trim(), email: f.rEmail.trim(), relacao: f.rParentesco.trim(), telefone: f.rTelefone, telefone2: f.rTelefone2, cpf: f.rCpf },
+        responsavel: { nome: f.rNome.trim(), email: f.rEmail.trim(), relacao: f.rParentesco.trim(), telefone: f.rTelefone, cpf: f.rCpf },
         ativo: f.ativo, foto: f.foto,
       },
       this.id(),

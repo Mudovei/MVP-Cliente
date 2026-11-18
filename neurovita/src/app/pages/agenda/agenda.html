@@ -23,7 +23,7 @@
         <div class="ag-grade" role="grid" aria-label="Agenda semanal">
           <div class="ag-canto">Hora</div>
           @for (d of dias(); track d.iso) {
-            <div class="ag-dia" [class.ag-dia-hoje]="d.hoje" [style.grid-column]="$index + 2">{{ d.nome }}<br />{{ d.texto }}</div>
+            <div class="ag-dia" [class.ag-dia-hoje]="d.hoje" [style.grid-column]="$index + 2"><small>{{ d.nome }}</small><strong>{{ d.texto }}</strong></div>
           }
           @for (linha of grade(); track $index; let i = $index) {
             <div class="ag-hora" [style.grid-row]="i + 2">{{ horas[i] }}</div>
@@ -37,13 +37,8 @@
                     (click)="selecionar(e.id)"
                   >
                     <strong>{{ e.nome }}</strong>
-                    @if (celula.length === 1) {
-                      <span>{{ e.inicio }} - {{ e.fim }}</span>
-                      <span>{{ e.atendimento }}</span>
-                      <small>{{ e.profNome }}</small>
-                    } @else {
-                      <span>{{ e.inicio }} · {{ e.atendimento }}</span>
-                    }
+                    <span>{{ e.atendimento }}</span>
+                    @if (celula.length === 1) { <small>{{ e.profNome }}</small> }
                   </button>
                 }
               </div>
@@ -143,31 +138,66 @@
       </div>
 
       <div class="edicao-grade">
-        <label class="edicao-campo">Data
-          <span class="edicao-entrada"><app-icone nome="calendario" /><input type="date" [value]="editData()" (change)="editData.set($any($event.target).value)" /></span>
-        </label>
-        <label class="edicao-campo">Horário
-          <span class="edicao-entrada"><app-icone nome="relogio" />
-            <select (change)="editHora.set($any($event.target).value)">
-              @for (h of opcoesHorario(); track h) { <option [value]="h" [selected]="h === editHora()">{{ h }}</option> }
-            </select>
-          </span>
-        </label>
-        <label class="edicao-campo">Profissional
-          <span class="edicao-entrada"><app-icone nome="usuario" />
-            <select (change)="editProf.set($any($event.target).value)">
-              @for (p of opcoesProfissionais(); track p.valor) { <option [value]="p.valor" [selected]="p.valor === editProf()">{{ p.rotulo }}</option> }
-            </select>
-          </span>
-        </label>
-        <label class="edicao-campo">Sala
-          <span class="edicao-entrada"><app-icone nome="local" />
-            <select (change)="editSala.set($any($event.target).value)">
-              @for (sala of salas; track sala) { <option [value]="sala" [selected]="sala === editSala()">{{ sala }}</option> }
-              @if (!salas.includes(editSala())) { <option [value]="editSala()" selected>{{ editSala() }}</option> }
-            </select>
-          </span>
-        </label>
+        <div class="edicao-campo ed-pop-raiz">
+          <span>Data</span>
+          <button type="button" class="edicao-entrada edicao-seletor" aria-haspopup="dialog" [attr.aria-expanded]="popup() === 'data'" (click)="alternarPopup('data')">
+            <app-icone nome="calendario" />
+            <span class="edicao-valor">{{ dataEditada() }}</span>
+            <app-icone nome="seta-baixo" />
+          </button>
+          @if (popup() === 'data') {
+            <div class="ed-cal" role="dialog" aria-label="Escolher a data">
+              <div class="ed-cal-mes">
+                <button type="button" class="ed-cal-seta" aria-label="Mês anterior" (click)="mudarMesCal(-1)"><app-icone nome="seta-esquerda" /></button>
+                <strong>{{ nomeMesCal() }}</strong>
+                <button type="button" class="ed-cal-seta" aria-label="Próximo mês" (click)="mudarMesCal(1)"><app-icone nome="seta-direita" /></button>
+              </div>
+              <div class="ed-cal-grade">
+                @for (nome of diasSemanaCal; track nome) { <span class="ed-cal-semana">{{ nome }}</span> }
+                @for (d of semanasCal(); track $index) {
+                  @if (d.numero) {
+                    <button type="button" class="ed-cal-dia" [class.ed-cal-dia-sel]="d.selecionado" [disabled]="d.desabilitado" (click)="escolherDia(d.iso)">{{ d.numero }}</button>
+                  } @else {
+                    <span></span>
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="edicao-campo ed-pop-raiz">
+          <span>Horário</span>
+          <button type="button" class="edicao-entrada edicao-seletor" aria-haspopup="listbox" [attr.aria-expanded]="popup() === 'hora'" (click)="alternarPopup('hora')">
+            <app-icone nome="relogio" />
+            <span class="edicao-valor">{{ editHora() || 'Sem horário' }}</span>
+            <app-icone nome="seta-baixo" />
+          </button>
+          @if (popup() === 'hora') {
+            <div class="ed-horas" role="listbox" aria-label="Escolher o horário">
+              @for (h of opcoesHorario(); track h) {
+                <button type="button" role="option" class="ed-hora" [attr.aria-selected]="h === editHora()" (click)="escolherHora(h)"><app-icone nome="relogio" /> {{ h }}</button>
+              } @empty {
+                <p class="lista-vazia">Nenhum horário livre nesse dia.</p>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="edicao-campo">
+          <span>Profissional</span>
+          <app-lista-suspensa titulo="Profissionais" [opcoes]="opcoesProfissionais()" [valor]="editProf()" (valorChange)="mudarProfissional($event)" />
+        </div>
+
+        <div class="edicao-campo">
+          <span>Sala</span>
+          <span class="edicao-entrada edicao-sala">{{ editSala() }}</span>
+        </div>
+      </div>
+
+      <div class="radios-seg edicao-tipo" role="radiogroup" aria-label="Tipo de atendimento">
+        <label class="radio"><input type="radio" name="edicao-atendimento" [checked]="editAtend() === 'Online'" (change)="mudarAtendimento('Online')" /><span class="radio-bolinha"></span> Online</label>
+        <label class="radio"><input type="radio" name="edicao-atendimento" [checked]="editAtend() === 'Presencial'" (change)="mudarAtendimento('Presencial')" /><span class="radio-bolinha"></span> Presencial</label>
       </div>
 
       <button type="button" class="edicao-botao edicao-confirmar" (click)="confirmarConsulta()"><app-icone nome="check-grande" /> Confirmar consulta</button>

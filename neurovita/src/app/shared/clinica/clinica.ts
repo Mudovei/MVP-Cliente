@@ -53,6 +53,7 @@ export class Clinica {
       const editado: Paciente = {
         ...atual, nome: dados.nome, nascimento: dados.nascimento, email: dados.email ?? atual.email, cpf: dados.cpf, telefone: dados.telefone ?? atual.telefone,
         endereco: dados.endereco ?? atual.endereco, cep: dados.cep ?? atual.cep, cidade: dados.cidade ?? atual.cidade,
+        numero: dados.numero ?? atual.numero, complemento: dados.complemento ?? atual.complemento, bairro: dados.bairro ?? atual.bairro,
         encerramento: dados.encerramento !== undefined ? dados.encerramento || null : atual.encerramento,
         status, situacao, plano: dados.plano ?? atual.plano,
         foto: dados.foto === undefined ? atual.foto : dados.foto || undefined,
@@ -74,7 +75,7 @@ export class Clinica {
     const novo: Paciente = {
       id: lista.some((p) => p.id === base) ? `${base}-${codigo}` : base, codigo,
       nome: dados.nome, nascimento: dados.nascimento, telefone: dados.telefone || '—', email: dados.email || '—', cpf: dados.cpf,
-      endereco: dados.endereco || '—', cep: dados.cep, cidade: dados.cidade, foto: dados.foto || undefined, encerramento: dados.encerramento || null, status, situacao, ultimaConsulta: null, profissionalId: null,
+      endereco: dados.endereco || '—', cep: dados.cep, cidade: dados.cidade, numero: dados.numero, complemento: dados.complemento, bairro: dados.bairro, foto: dados.foto || undefined, encerramento: dados.encerramento || null, status, situacao, ultimaConsulta: null, profissionalId: null,
       responsavel: { nome: r.nome || '—', relacao: r.relacao || '—', telefone: r.telefone || '—', endereco: dados.endereco || '—', email: r.email, telefone2: r.telefone2, nascimento: r.nascimento, cpf: r.cpf },
       plano: dados.plano ?? { possui: false, nome: '', carteirinha: '', validade: '' },
       diagnostico: { principal: '—', cid: '—', inicioTratamento: dados.inicio || null },
@@ -177,7 +178,7 @@ export class Clinica {
    * TODO (back-end): trocar pela disponibilidade real da agenda de cada profissional.
    */
   horarioAberto(profissionalId: string, data: string, inicio: string): boolean {
-    const posicao = (minutosDe(inicio) - 8 * 60) / 30; // 0 = 08:00, 1 = 08:30...
+    const posicao = (minutosDe(inicio) - 8 * 60) / 60; // 0 = 08:00, 1 = 09:00...
     const [a, m, d] = data.split('-').map(Number);
     const dia = Math.round(Date.UTC(a, m - 1, d) / 86_400_000);
     const semente = [...profissionalId].reduce((soma, letra) => soma + letra.charCodeAt(0), 0);

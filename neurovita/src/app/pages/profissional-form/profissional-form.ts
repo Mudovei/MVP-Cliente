@@ -53,7 +53,7 @@ export class ProfissionalForm {
   ];
 
   protected readonly f = signal<Formulario>({ ...VAZIO });
-  protected readonly faixas = signal<Faixa[]>([{ inicio: '08:00', fim: '11:00' }, { inicio: '13:00', fim: '18:00' }]);
+  protected readonly faixas = signal<Faixa[]>([{ inicio: '08:00', fim: '18:00' }]);
   protected readonly faixaInicio = signal('08:00');
   protected readonly faixaFim = signal('18:00');
   protected readonly faixaEditando = signal<number | null>(null);
@@ -142,7 +142,11 @@ export class ProfissionalForm {
     const inicio = this.faixaInicio();
     const fim = this.faixaFim();
     const editando = this.faixaEditando();
-    if (!inicio || !fim || minutosDe(inicio) >= minutosDe(fim)) {
+    if (!inicio || !fim || minutosDe(inicio) < 8 * 60 || minutosDe(fim) > 18 * 60 || minutosDe(inicio) % 60 || minutosDe(fim) % 60) {
+      this.erroFaixa.set('Use horários cheios entre 08:00 e 18:00 (consultas das 08h às 17h).');
+      return;
+    }
+    if (minutosDe(inicio) >= minutosDe(fim)) {
       this.erroFaixa.set('O horário final precisa ser depois do inicial.');
       return;
     }

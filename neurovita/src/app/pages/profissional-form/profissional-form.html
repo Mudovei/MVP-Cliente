@@ -76,8 +76,8 @@
               <div class="form-grupo">
                 <p class="form-grupo-titulo">Horário de atendimento</p>
                 <div class="faixa-campos">
-                  <label>Das <input type="time" step="1800" [value]="faixaInicio()" (input)="faixaInicio.set($any($event.target).value)" /></label>
-                  <label>Até <input type="time" step="1800" [value]="faixaFim()" (input)="faixaFim.set($any($event.target).value)" /></label>
+                  <label>Das <input type="time" step="3600" min="08:00" max="18:00" [value]="faixaInicio()" (input)="faixaInicio.set($any($event.target).value)" /></label>
+                  <label>Até <input type="time" step="3600" min="08:00" max="18:00" [value]="faixaFim()" (input)="faixaFim.set($any($event.target).value)" /></label>
                   <button type="button" class="botao-mini" (click)="salvarFaixa()">{{ faixaEditando() === null ? 'Adicionar' : 'Salvar horário' }}</button>
                 </div>
                 @if (erroFaixa()) { <small class="campo-msg" role="alert">{{ erroFaixa() }}</small> }

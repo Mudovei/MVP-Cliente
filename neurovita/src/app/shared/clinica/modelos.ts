@@ -45,6 +45,9 @@ export interface Paciente {
   email: string;
   cpf: string;
   endereco: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
   cep?: string;
   cidade?: string;
   /** 'aaaa-mm-dd' (fim do acompanhamento, se já encerrou) */
@@ -70,6 +73,9 @@ export interface DadosPaciente {
   cpf: string;
   telefone?: string;
   endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
   cep?: string;
   cidade?: string;
   /** Foto do paciente (endereço da imagem). '' = sem foto / remover. */
@@ -140,8 +146,13 @@ export interface Secretaria {
   email: string;
   cpf: string;
   endereco: string;
+  cep: string;
+  cidade: string;
+  bairro: string;
+  numero: string;
+  complemento: string;
   cargo: string;
-  /** 'aaaa-mm-dd' */
+  /** 'aaaa-mm-dd' (data de contratação) */
   admissao: string;
   ativo: boolean;
   emailAcesso: string;

@@ -23,21 +23,11 @@ export interface ConfigPerfil {
   menu: ItemMenu[];
   /** Mostra a setinha ao lado do usuário (abre o menu "Sair"). */
   setaUsuario: boolean;
-  /** Mostra os 3 pontinhos nas linhas da agenda e das próximas consultas. */
-  menuAcoes: boolean;
   /** Os dois botões grandes (`rota` = para onde levam, quando a tela já existe). */
   acoes: { texto: string; icone: IconeAcao; rota?: string }[];
   /** Mostra o sino de notificações no topo. */
   sino: boolean;
-  /** 'demo' = números fixos do protótipo; 'agenda' = calculados a partir das consultas marcadas. */
-  fonte: 'demo' | 'agenda';
-  banner: { variante: 'azul' | 'roxo'; titulo: string; texto?: string };
 }
-
-const BANNER_GESTAO = {
-  variante: 'roxo',
-  titulo: 'Seu trabalho organiza caminhos e torna cada atendimento possível todos os dias !',
-} as const;
 
 export const CONFIG_PERFIS: Record<Perfil, ConfigPerfil> = {
   secretaria: {
@@ -47,30 +37,21 @@ export const CONFIG_PERFIS: Record<Perfil, ConfigPerfil> = {
     usuario: { nome: 'Juliana', cargo: 'Secretária' },
     menu: ['inicio', 'pacientes', 'agenda'],
     setaUsuario: true,
-    menuAcoes: false,
     acoes: [
-      { texto: 'Gerenciar Consultas', icone: 'mais', rota: '/secretaria/consultas' },
+      { texto: 'Gerenciar consultas', icone: 'mais', rota: '/secretaria/consultas' },
       { texto: 'Gerenciar paciente', icone: 'usuario-mais', rota: '/secretaria/pacientes' },
     ],
     sino: false,
-    fonte: 'agenda',
-    banner: BANNER_GESTAO,
   },
   admin: {
     rota: '/admin',
     titulo: 'Início do administrador | NeuroVita',
     saudacao: 'Olá, Administrador',
     usuario: { nome: 'usuário', cargo: 'Administrador' },
-    menu: ['inicio', 'pacientes', 'profissionais', 'secretaria', 'agenda'],
+    menu: ['inicio', 'secretaria'],
     setaUsuario: true,
-    menuAcoes: false,
-    acoes: [
-      { texto: 'Gerenciar Profissional', icone: 'mais', rota: '/admin/profissionais' },
-      { texto: 'Gerenciar secretária', icone: 'usuario-mais', rota: '/admin/secretarias' },
-    ],
+    acoes: [{ texto: 'Gerenciar Secretária', icone: 'usuario-mais', rota: '/admin/secretarias' }],
     sino: false,
-    fonte: 'agenda',
-    banner: BANNER_GESTAO,
   },
 };
 

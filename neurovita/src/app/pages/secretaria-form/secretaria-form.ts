@@ -12,16 +12,42 @@ import {
 } from '../../shared/util';
 
 interface Formulario {
-  nome: string; nascimento: string; email: string; cpf: string; telefone: string; endereco: string;
+  nome: string; nascimento: string; cpf: string; telefone: string; cidade: string; cep: string; bairro: string;
+  endereco: string; numero: string; complemento: string;
   cargo: string; admissao: string; ativo: boolean;
   emailAcesso: string; senha: string; boasVindas: boolean;
 }
 type Campo = keyof Formulario;
 
 const VAZIO: Formulario = {
-  nome: '', nascimento: '', email: '', cpf: '', telefone: '', endereco: '', cargo: 'Secretária', admissao: '',
-  ativo: true, emailAcesso: '', senha: '', boasVindas: true,
+  nome: '', nascimento: '', cpf: '', telefone: '', cidade: '', cep: '', bairro: '', endereco: '', numero: '', complemento: '',
+  cargo: 'Secretária', admissao: '', ativo: true, emailAcesso: '', senha: '', boasVindas: false,
 };
+
+/** Máscara DD/MM/AAAA. */
+function mascaraData(valor: string): string {
+  const n = valor.replace(/\D/g, '').slice(0, 8);
+  if (n.length <= 2) return n;
+  return n.length <= 4 ? `${n.slice(0, 2)}/${n.slice(2)}` : `${n.slice(0, 2)}/${n.slice(2, 4)}/${n.slice(4)}`;
+}
+
+/** Máscara 00000-000. */
+function mascaraCep(valor: string): string {
+  const n = valor.replace(/\D/g, '').slice(0, 8);
+  return n.length > 5 ? `${n.slice(0, 5)}-${n.slice(5)}` : n;
+}
+
+/** 'DD/MM/AAAA' -> 'aaaa-mm-dd' ('' se não for uma data real). */
+function dataParaISO(br: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(br);
+  if (!m) return '';
+  const [, d, mes, a] = m;
+  const data = new Date(Number(a), Number(mes) - 1, Number(d));
+  const real = data.getFullYear() === Number(a) && data.getMonth() === Number(mes) - 1 && data.getDate() === Number(d);
+  return real ? `${a}-${mes}-${d}` : '';
+}
+
+const dataBR = (iso?: string | null): string => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '');
 
 /** Cadastrar nova secretária ou editar uma secretária existente (administrador). */
 @Component({
@@ -48,25 +74,31 @@ export class SecretariaForm {
   protected readonly existente = computed(() => this.clinica.secretaria(this.id()));
   protected readonly voltar = computed(() => `/${this.perfil()}/secretarias`);
 
+  private readonly nascimentoISO = computed(() => dataParaISO(this.f().nascimento));
+  private readonly admissaoISO = computed(() => dataParaISO(this.f().admissao));
+
   protected readonly erros = computed(() => {
     const f = this.f();
     const e: Partial<Record<Campo, string>> = {};
     if (f.nome.trim().length < 3) e.nome = 'Informe o nome completo.';
     if (!f.nascimento) e.nascimento = 'Informe a data de nascimento.';
-    else if (idadeDe(f.nascimento) < 16 || deISO(f.nascimento) > new Date()) e.nascimento = 'Data de nascimento inválida.';
-    if (!f.email.trim()) e.email = 'Informe o e-mail.';
-    else if (!emailValido(f.email)) e.email = 'E-mail inválido.';
+    else if (!this.nascimentoISO()) e.nascimento = 'Data inválida. Use DD/MM/AAAA.';
+    else if (idadeDe(this.nascimentoISO()) < 16 || deISO(this.nascimentoISO()) > new Date()) e.nascimento = 'Data de nascimento inválida.';
     if (!f.cpf.trim()) e.cpf = 'Informe o CPF.';
     else if (!cpfValido(f.cpf)) e.cpf = 'CPF inválido.';
-    if (!f.telefone.trim()) e.telefone = 'Informe o telefone.';
-    else if (!telefoneValido(f.telefone)) e.telefone = 'Telefone inválido.';
+    if (f.telefone.trim() && !telefoneValido(f.telefone)) e.telefone = 'Telefone inválido.';
+    if (!f.cidade.trim()) e.cidade = 'Informe a cidade.';
+    if (!f.cep.trim()) e.cep = 'Informe o CEP.';
+    else if (f.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP inválido.';
     if (!f.cargo.trim()) e.cargo = 'Informe o cargo.';
-    if (!f.admissao) e.admissao = 'Informe a data de admissão.';
-    else if (deISO(f.admissao) > new Date()) e.admissao = 'A data não pode ser no futuro.';
-    if (!f.emailAcesso.trim()) e.emailAcesso = 'Informe o e-mail de acesso.';
+    if (f.admissao) {
+      if (!this.admissaoISO()) e.admissao = 'Data inválida. Use DD/MM/AAAA.';
+      else if (deISO(this.admissaoISO()) > new Date()) e.admissao = 'A data não pode ser no futuro.';
+    }
+    if (!f.emailAcesso.trim()) e.emailAcesso = 'Informe o usuário (e-mail de acesso).';
     else if (!emailValido(f.emailAcesso)) e.emailAcesso = 'E-mail inválido.';
     else if (this.clinica.emailDeAcessoEmUso(f.emailAcesso, this.id())) e.emailAcesso = 'Esse e-mail de acesso já está em uso.';
-    if ((!this.edicao() || f.senha) && f.senha.length < 6) e.senha = 'A senha temporária precisa ter 6 caracteres ou mais.';
+    if ((!this.edicao() || f.senha) && f.senha.length < 6) e.senha = 'A senha precisa ter 6 caracteres ou mais.';
     return e;
   });
 
@@ -76,8 +108,9 @@ export class SecretariaForm {
       if (this.carregado || !s) return;
       this.carregado = true;
       this.f.set({
-        nome: s.nome, nascimento: s.nascimento, email: s.email, cpf: s.cpf, telefone: s.telefone, endereco: s.endereco,
-        cargo: s.cargo, admissao: s.admissao, ativo: s.ativo, emailAcesso: s.emailAcesso, senha: '', boasVindas: false,
+        nome: s.nome, nascimento: dataBR(s.nascimento), cpf: s.cpf, telefone: s.telefone, cidade: s.cidade ?? '', cep: s.cep ?? '',
+        bairro: s.bairro ?? '', endereco: s.endereco, numero: s.numero ?? '', complemento: s.complemento ?? '',
+        cargo: s.cargo, admissao: dataBR(s.admissao), ativo: s.ativo, emailAcesso: s.emailAcesso, senha: '', boasVindas: false,
       });
     });
   }
@@ -90,6 +123,8 @@ export class SecretariaForm {
     let valor = (evento.target as HTMLInputElement).value;
     if (campo === 'cpf') valor = formatarCpf(valor);
     if (campo === 'telefone') valor = formatarTelefone(valor);
+    if (campo === 'cep') valor = mascaraCep(valor);
+    if (campo === 'nascimento' || campo === 'admissao') valor = mascaraData(valor);
     this.f.update((atual) => ({ ...atual, [campo]: valor }));
     (evento.target as HTMLInputElement).value = valor;
   }
@@ -115,15 +150,16 @@ export class SecretariaForm {
     const f = this.f();
     const secretaria = this.clinica.salvarSecretaria(
       {
-        nome: f.nome.trim(), nascimento: f.nascimento, telefone: f.telefone, email: f.email.trim(), cpf: f.cpf,
-        endereco: f.endereco.trim() || '—', cargo: f.cargo.trim(), admissao: f.admissao, ativo: f.ativo, emailAcesso: f.emailAcesso.trim(),
+        nome: f.nome.trim(), nascimento: this.nascimentoISO(), telefone: f.telefone, email: f.emailAcesso.trim(), cpf: f.cpf,
+        endereco: f.endereco.trim() || '—', cep: f.cep, cidade: f.cidade.trim(), bairro: f.bairro.trim(), numero: f.numero.trim(),
+        complemento: f.complemento.trim(), cargo: f.cargo.trim(), admissao: this.admissaoISO(), ativo: f.ativo, emailAcesso: f.emailAcesso.trim(),
       },
       this.id(),
     );
     // TODO (back-end): gravar a senha temporária com segurança e enviar o e-mail de boas-vindas (f.boasVindas).
     this.confirmando.set(false);
     if (this.edicao()) this.aviso.mostrar(`Dados de ${secretaria.nome} atualizados.`);
-    else this.aviso.mostrar(`Secretária cadastrada. Senha temporária: ${f.senha}`, 9000);
+    else this.aviso.mostrar(`Secretária cadastrada. Senha: ${f.senha}`, 9000);
     this.router.navigateByUrl(this.voltar());
   }
 

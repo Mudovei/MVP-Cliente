@@ -2,7 +2,7 @@ import { Component, ElementRef, computed, effect, inject, input, signal, viewChi
 
 import { Aviso } from '../../shared/aviso/aviso';
 import { Clinica } from '../../shared/clinica/clinica';
-import { Agendamento, StatusConsulta } from '../../shared/clinica/modelos';
+import { Agendamento, StatusConsulta, TipoAtendimento } from '../../shared/clinica/modelos';
 import { nomeProfissional } from '../../shared/clinica/rotulos';
 import { HORARIOS_AGENDA, HORAS_AGENDA, ORDEM_STATUS, ROTULO_STATUS, SALAS, minutosDe } from '../../shared/clinica/status';
 import { Avatar } from '../../shared/avatar/avatar';
@@ -10,6 +10,7 @@ import { SEGUNDA_BASE } from '../../shared/dados-agenda';
 import { horaAtual, hojeAtual } from '../../shared/relogio';
 import { Dialogo } from '../../shared/dialogo/dialogo';
 import { Icone } from '../../shared/icone/icone';
+import { ListaSuspensa } from '../../shared/lista-suspensa/lista-suspensa';
 import { Perfil } from '../../shared/perfil';
 import { TituloPagina } from '../../shared/titulo-pagina/titulo-pagina';
 import { deISO, diaDaSemana, formatarData, idadeDe, normalizar, paraISO, somarDias } from '../../shared/util';
@@ -33,9 +34,9 @@ function semanaDe(iso: string): number {
  */
 @Component({
   selector: 'app-agenda',
-  imports: [Avatar, Dialogo, Icone, TituloPagina],
+  imports: [Avatar, Dialogo, Icone, ListaSuspensa, TituloPagina],
   templateUrl: './agenda.html',
-  host: { '(document:click)': 'fecharMenu($event)', '(document:keydown.escape)': 'editando.set(false)' },
+  host: { '(document:click)': 'fecharMenu($event)', '(document:keydown.escape)': 'aoApertarEsc()' },
 })
 export class Agenda {
   private readonly clinica = inject(Clinica);
@@ -64,6 +65,11 @@ export class Agenda {
   protected readonly editHora = signal('');
   protected readonly editProf = signal('');
   protected readonly editSala = signal('');
+  protected readonly editAtend = signal<TipoAtendimento>('Presencial');
+  /** Qual lista está aberta dentro da janela: o calendário da data ou a lista de horários. */
+  protected readonly popup = signal<'data' | 'hora' | null>(null);
+  /** Mês mostrado no calendário da janela. */
+  protected readonly mesCal = signal({ ano: 2026, mes: 0 });
 
   private readonly seletorData = viewChild<ElementRef<HTMLInputElement>>('seletorData');
   private readonly menuRaiz = viewChild<ElementRef<HTMLElement>>('menuStatusRaiz');
@@ -115,7 +121,7 @@ export class Agenda {
           profNome: prof ? nomeProfissional(prof) : '—',
           dia: diaDaSemana(a.data),
           fim: deMinutos(minutosDe(a.inicio) + a.duracao),
-          // Cada consulta fica no quadrado da hora em que começa (08:30 fica na linha das 08:00).
+          // Cada consulta fica no quadrado da hora em que começa.
           linhaDaHora: Math.floor((minutosDe(a.inicio) - 8 * 60) / 60),
           destaque: !termo || normalizar(paciente?.nome ?? '').includes(termo),
           selecionado: a.id === this.selecionadoId(),
@@ -202,6 +208,7 @@ export class Agenda {
   }
 
   protected fecharMenu(evento: Event): void {
+    if (this.popup() && !(evento.target as HTMLElement).closest?.('.ed-pop-raiz')) this.popup.set(null);
     if (this.menuStatus() && !this.menuRaiz()?.nativeElement.contains(evento.target as Node)) this.menuStatus.set(false);
   }
 
@@ -222,7 +229,96 @@ export class Agenda {
     this.editHora.set(e.a.inicio);
     this.editProf.set(e.a.profissionalId);
     this.editSala.set(e.a.sala);
+    this.editAtend.set(e.a.atendimento);
+    this.popup.set(null);
+    this.mesCal.set(this.mesDe(e.a.data));
     this.editando.set(true);
+  }
+
+  private mesDe(iso: string): { ano: number; mes: number } {
+    const d = deISO(iso);
+    return { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+
+  /* ----- Calendário da data ----- */
+
+  protected readonly nomeMesCal = computed(() => {
+    const { ano, mes } = this.mesCal();
+    const nome = new Date(ano, mes, 1).toLocaleDateString('pt-BR', { month: 'long' });
+    return nome.charAt(0).toUpperCase() + nome.slice(1);
+  });
+
+  protected readonly dataEditada = computed(() => formatarData(this.editData()));
+
+  protected readonly diasSemanaCal = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  /** Dias do mês mostrado (domingo a sábado). Dias em que o profissional não atende ficam desabilitados. */
+  protected readonly semanasCal = computed(() => {
+    const { ano, mes } = this.mesCal();
+    const atende = this.clinica.profissional(this.editProf())?.disponibilidade.dias ?? [];
+    const original = this.escolhido()?.a.data;
+    const dias: { iso: string; numero: number; selecionado: boolean; desabilitado: boolean }[] = [];
+    const vazios = new Date(ano, mes, 1).getDay();
+    for (let i = 0; i < vazios; i++) dias.push({ iso: '', numero: 0, selecionado: false, desabilitado: true });
+    const total = new Date(ano, mes + 1, 0).getDate();
+    for (let n = 1; n <= total; n++) {
+      const iso = paraISO(new Date(ano, mes, n));
+      dias.push({
+        iso, numero: n, selecionado: iso === this.editData(),
+        desabilitado: iso !== original && !atende.includes(diaDaSemana(iso)),
+      });
+    }
+    return dias;
+  });
+
+  protected alternarPopup(qual: 'data' | 'hora'): void {
+    this.popup.set(this.popup() === qual ? null : qual);
+    if (qual === 'data' && this.popup() === 'data') this.mesCal.set(this.mesDe(this.editData()));
+  }
+
+  protected mudarMesCal(delta: number): void {
+    const { ano, mes } = this.mesCal();
+    const d = new Date(ano, mes + delta, 1);
+    this.mesCal.set({ ano: d.getFullYear(), mes: d.getMonth() });
+  }
+
+  protected escolherDia(iso: string): void {
+    this.editData.set(iso);
+    this.popup.set(null);
+    this.ajustarHorarioESala();
+  }
+
+  protected escolherHora(hora: string): void {
+    this.editHora.set(hora);
+    this.popup.set(null);
+    this.ajustarHorarioESala();
+  }
+
+  protected mudarProfissional(id: string): void {
+    this.editProf.set(id);
+    this.ajustarHorarioESala();
+  }
+
+  protected mudarAtendimento(tipo: TipoAtendimento): void {
+    this.editAtend.set(tipo);
+    this.ajustarHorarioESala();
+  }
+
+  /** Se o horário escolhido deixou de estar livre, pega o primeiro livre. A sala segue o horário. */
+  private ajustarHorarioESala(): void {
+    const e = this.escolhido();
+    if (!e) return;
+    const opcoes = this.opcoesHorario();
+    if (!opcoes.includes(this.editHora())) this.editHora.set(opcoes[0] ?? '');
+    const igual = this.editData() === e.a.data && this.editHora() === e.a.inicio;
+    this.editSala.set(
+      igual ? e.a.sala : this.editHora() ? this.clinica.salaLivre(this.editData(), this.editHora(), e.a.duracao, this.salas) : e.a.sala,
+    );
+  }
+
+  protected aoApertarEsc(): void {
+    if (this.popup()) this.popup.set(null);
+    else this.editando.set(false);
   }
 
   protected readonly opcoesProfissionais = computed(() =>
@@ -234,10 +330,11 @@ export class Agenda {
   protected readonly opcoesHorario = computed(() => {
     const e = this.escolhido();
     if (!e) return [];
+    const mesmoDiaEProf = this.editData() === e.a.data && this.editProf() === e.a.profissionalId;
     return HORARIOS_AGENDA.filter(
       (h) =>
-        h === this.editHora() ||
-        (this.clinica.disponivel(this.editProf(), this.editData(), h, e.a.duracao, e.a.atendimento) &&
+        (mesmoDiaEProf && h === e.a.inicio) ||
+        (this.clinica.disponivel(this.editProf(), this.editData(), h, e.a.duracao, this.editAtend()) &&
           this.clinica.horarioAberto(this.editProf(), this.editData(), h) &&
           this.clinica.horarioLivre(this.editData(), h, e.a.duracao, this.editProf(), e.a.pacienteId, e.a.id)),
     );
@@ -261,7 +358,7 @@ export class Agenda {
     const e = this.escolhido();
     if (!e) return;
     const atualizado: Agendamento = {
-      ...e.a, data: this.editData(), inicio: this.editHora(), profissionalId: this.editProf(), sala: this.editSala(), status,
+      ...e.a, data: this.editData(), inicio: this.editHora(), profissionalId: this.editProf(), sala: this.editSala(), atendimento: this.editAtend(), status,
     };
     this.clinica.atualizarAgendamento(atualizado);
     this.semana.set(semanaDe(atualizado.data));
@@ -276,9 +373,9 @@ export class Agenda {
   protected remarcarConsulta(): void {
     const e = this.escolhido();
     if (!e || !this.podeSalvar()) return;
-    const mudou = this.editData() !== e.a.data || this.editHora() !== e.a.inicio || this.editProf() !== e.a.profissionalId;
+    const mudou = this.editData() !== e.a.data || this.editHora() !== e.a.inicio || this.editProf() !== e.a.profissionalId || this.editAtend() !== e.a.atendimento;
     if (!mudou) {
-      this.aviso.mostrar('Altere a data, o horário ou o profissional para remarcar.');
+      this.aviso.mostrar('Altere a data, o horário, o profissional ou o tipo de atendimento para remarcar.');
       return;
     }
     this.aplicar('remarcado', 'Consulta remarcada.');
